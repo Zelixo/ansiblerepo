@@ -1,0 +1,37 @@
+---
+- name: Update Ubuntu and Fedora Servers
+  hosts: all
+  become: true  # Required for running tasks with elevated privileges (sudo)
+
+  tasks:
+    - name: Update apt cache (Ubuntu)
+      apt:
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Update dnf cache (Fedora)
+      dnf:
+        update_cache: yes
+      when: ansible_distribution == "Fedora"
+
+    - name: Upgrade all packages
+      package:
+        name: "*"
+        state: latest
+      changed_when: true # Ensures the task reports a change even if no packages were updated
+
+    - name: Reboot servers after updates
+      reboot:
+        reboot: yes
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 0
+      async: true  # Run in the background
+      poll: 0
+
+    - name: Wait for servers to come back online (optional - depends on your needs)
+      wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 22
+        state: started
+        timeout: 300
